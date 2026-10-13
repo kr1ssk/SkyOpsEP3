@@ -1,7 +1,6 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useState,
 } from "react";
 
@@ -54,16 +53,18 @@ export function SkyOpsProvider({ children }) {
   const [datos, setDatos] = useState(leerDatos);
   const [errorAlmacenamiento, setErrorAlmacenamiento] = useState("");
 
-  useEffect(() => {
+  function actualizarDatos(nuevosDatos) {
     try {
-      localStorage.setItem(CLAVE, JSON.stringify(datos));
+      localStorage.setItem(CLAVE, JSON.stringify(nuevosDatos));
       setErrorAlmacenamiento("");
     } catch {
       setErrorAlmacenamiento(
         "No se pudieron guardar los cambios en el navegador."
       );
     }
-  }, [datos]);
+
+    setDatos(nuevosDatos);
+  }
 
   const usuario = datos.usuarios.find(u => u.id === datos.sesionId) || null;
 
@@ -72,18 +73,18 @@ export function SkyOpsProvider({ children }) {
   }
 
   function registrarUsuario(formulario) {
-    setDatos(repositorio.guardarUsuario(datos, { ...formulario, id: null, rol: "cliente" }));
+    actualizarDatos(repositorio.guardarUsuario(datos, { ...formulario, id: null, rol: "cliente" }));
   }
 
-  function iniciarSesion(correo, clave) { setDatos(repositorio.iniciarSesion(datos, correo, clave)); }
-  function cerrarSesion() { setDatos({ ...datos, sesionId: null }); }
-  function guardarUsuario(formulario) { exigirAdmin(); setDatos(repositorio.guardarUsuario(datos, formulario)); }
-  function borrarUsuario(id) { exigirAdmin(); setDatos(repositorio.borrarUsuario(datos, id)); }
-  function guardarCategoria(formulario) { exigirAdmin(); setDatos(repositorio.guardarCategoria(datos, formulario)); }
-  function borrarCategoria(id) { exigirAdmin(); setDatos(repositorio.borrarCategoria(datos, id)); }
+  function iniciarSesion(correo, clave) { actualizarDatos(repositorio.iniciarSesion(datos, correo, clave)); }
+  function cerrarSesion() { actualizarDatos({ ...datos, sesionId: null }); }
+  function guardarUsuario(formulario) { exigirAdmin(); actualizarDatos(repositorio.guardarUsuario(datos, formulario)); }
+  function borrarUsuario(id) { exigirAdmin(); actualizarDatos(repositorio.borrarUsuario(datos, id)); }
+  function guardarCategoria(formulario) { exigirAdmin(); actualizarDatos(repositorio.guardarCategoria(datos, formulario)); }
+  function borrarCategoria(id) { exigirAdmin(); actualizarDatos(repositorio.borrarCategoria(datos, id)); }
   function actualizarPerfil(formulario) {
     if (!usuario) throw new Error("Inicia sesión.");
-    setDatos(repositorio.guardarUsuario(datos, { ...usuario, ...formulario, id: usuario.id, rol: usuario.rol }));
+    actualizarDatos(repositorio.guardarUsuario(datos, { ...usuario, ...formulario, id: usuario.id, rol: usuario.rol }));
   }
 
   function agregarProducto(productoId) {
@@ -93,7 +94,7 @@ export function SkyOpsProvider({ children }) {
       productoId
     );
 
-    setDatos({ ...datos, carrito });
+    actualizarDatos({ ...datos, carrito });
   }
 
   function actualizarCantidad(productoId, cantidad) {
@@ -104,13 +105,13 @@ export function SkyOpsProvider({ children }) {
       cantidad
     );
 
-    setDatos({ ...datos, carrito });
+    actualizarDatos({ ...datos, carrito });
   }
 
   function eliminarDelCarrito(productoId) {
     const carrito = quitarDelCarrito(datos.carrito, productoId);
 
-    setDatos({ ...datos, carrito });
+    actualizarDatos({ ...datos, carrito });
   }
 
   function confirmarCompra(entrega, aprobada) {
@@ -135,19 +136,19 @@ export function SkyOpsProvider({ children }) {
       aprobada
     );
 
-    setDatos(resultado.datos);
+    actualizarDatos(resultado.datos);
 
     return resultado.pedido;
   }
 
   function guardarProducto(producto) {
     exigirAdmin();
-    setDatos(guardarProductoEnDatos(datos, producto));
+    actualizarDatos(guardarProductoEnDatos(datos, producto));
   }
 
   function borrarProducto(productoId) {
     exigirAdmin();
-    setDatos(borrarProductoEnDatos(datos, productoId));
+    actualizarDatos(borrarProductoEnDatos(datos, productoId));
   }
 
   function resolverPedido(pedidoId) {
@@ -158,7 +159,7 @@ export function SkyOpsProvider({ children }) {
         : pedido
     );
 
-    setDatos({ ...datos, pedidos });
+    actualizarDatos({ ...datos, pedidos });
   }
 
   function guardarContacto(contacto) {
@@ -168,7 +169,7 @@ export function SkyOpsProvider({ children }) {
       fecha: new Date().toISOString(),
     };
 
-    setDatos({
+    actualizarDatos({
       ...datos,
       contactos: [nuevo, ...datos.contactos],
     });
