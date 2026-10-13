@@ -75,4 +75,13 @@ describe("TarjetaProducto", () => {
 
     expect(onAgregar).not.toHaveBeenCalled();
   });
+
+  it("enlaza al detalle del producto con la ruta correcta", () => {
+    renderizar(bomba());
+
+    expect(screen.getByText("Ver detalle")).toHaveAttribute(
+      "href",
+      "/detalle/p1"
+    );
+  });
 });
