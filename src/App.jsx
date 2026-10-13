@@ -15,6 +15,11 @@ import Contacto from "./pages/Contacto.jsx";
 import Login from "./pages/Login.jsx";
 import Registro from "./pages/Registro.jsx";
 import Perfil from "./pages/Perfil.jsx";
+import LayoutAdmin from "./components/LayoutAdmin.jsx";
+import Dashboard from "./pages/admin/Dashboard.jsx";
+import Productos from "./pages/admin/Productos.jsx";
+import StockCritico from "./pages/admin/StockCritico.jsx";
+import Ordenes from "./pages/admin/Ordenes.jsx";
 
 export default function App() {
   return (
@@ -35,6 +40,14 @@ export default function App() {
         <Route path="login" element={<Login />} />
         <Route path="registro" element={<Registro />} />
         <Route path="perfil" element={<Perfil />} />
+        {/* Rutas anidadas: LayoutAdmin dibuja las pestañas y
+            las hijas se insertan en su propio <Outlet /> */}
+        <Route path="admin" element={<LayoutAdmin />}>
+          <Route index element={<Dashboard />} />
+          <Route path="productos" element={<Productos />} />
+          <Route path="stock" element={<StockCritico />} />
+          <Route path="ordenes" element={<Ordenes />} />
+        </Route>
         <Route path="*" element={<h1>404 · Página no encontrada</h1>} />
       </Route>
     </Routes>
