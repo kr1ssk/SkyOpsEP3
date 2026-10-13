@@ -20,6 +20,7 @@ import Dashboard from "./pages/admin/Dashboard.jsx";
 import Productos from "./pages/admin/Productos.jsx";
 import StockCritico from "./pages/admin/StockCritico.jsx";
 import Ordenes from "./pages/admin/Ordenes.jsx";
+import Resultado from "./pages/Resultado.jsx";
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="stock" element={<StockCritico />} />
           <Route path="ordenes" element={<Ordenes />} />
         </Route>
+        <Route path="resultado/:id" element={<Resultado />} />
         <Route path="*" element={<h1>404 · Página no encontrada</h1>} />
       </Route>
     </Routes>
