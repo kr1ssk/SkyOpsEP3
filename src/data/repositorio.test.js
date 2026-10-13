@@ -1,6 +1,8 @@
 import {
+  borrarCategoria,
   borrarProducto,
   borrarUsuario,
+  guardarCategoria,
   guardarProducto,
   guardarUsuario,
   iniciarSesion,
@@ -177,6 +179,63 @@ describe("iniciarSesion", () => {
     expect(() =>
       iniciarSesion(crearDatosIniciales(), "admin@skyops.cl", "otraClave1")
     ).toThrow("Correo o contraseña incorrectos.");
+  });
+});
+
+describe("guardarCategoria", () => {
+  it("agrega una categoría nueva con el nombre normalizado a mayúsculas", () => {
+    const resultado = guardarCategoria(crearDatosIniciales(), { id: null, nombre: " ata 36 " });
+
+    expect(resultado.categorias).toHaveLength(4);
+    expect(resultado.categorias.at(-1).nombre).toBe("ATA 36");
+  });
+
+  it("rechaza un nombre que no sigue el formato ATA 27", () => {
+    expect(() =>
+      guardarCategoria(crearDatosIniciales(), { id: null, nombre: "Hidráulica" })
+    ).toThrow("Usa el formato ATA 27.");
+  });
+
+  it("rechaza una categoría que ya existe", () => {
+    expect(() =>
+      guardarCategoria(crearDatosIniciales(), { id: null, nombre: "ATA 27" })
+    ).toThrow("La categoría ya existe.");
+  });
+
+  it("rechaza editar una categoría que no existe", () => {
+    expect(() =>
+      guardarCategoria(crearDatosIniciales(), { id: "inexistente", nombre: "ATA 50" })
+    ).toThrow("La categoría no existe.");
+  });
+
+  it("al renombrar una categoría actualiza los productos que la usan", () => {
+    const resultado = guardarCategoria(crearDatosIniciales(), { id: "ATA 27", nombre: "ATA 28" });
+
+    expect(resultado.categorias.some((c) => c.nombre === "ATA 28")).toBe(true);
+    expect(resultado.productos[0].categoria).toBe("ATA 28");
+  });
+});
+
+describe("borrarCategoria", () => {
+  it("elimina una categoría que no tiene productos asociados", () => {
+    const datos = guardarCategoria(crearDatosIniciales(), { id: null, nombre: "ATA 36" });
+    const nueva = datos.categorias.at(-1);
+
+    const resultado = borrarCategoria(datos, nueva.id);
+
+    expect(resultado.categorias.some((c) => c.id === nueva.id)).toBe(false);
+  });
+
+  it("impide eliminar una categoría con productos asociados", () => {
+    expect(() => borrarCategoria(crearDatosIniciales(), "ATA 27")).toThrow(
+      "La categoría tiene productos asociados."
+    );
+  });
+
+  it("rechaza eliminar una categoría que no existe", () => {
+    expect(() => borrarCategoria(crearDatosIniciales(), "inexistente")).toThrow(
+      "La categoría no existe."
+    );
   });
 });
 
