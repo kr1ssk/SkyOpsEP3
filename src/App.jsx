@@ -8,6 +8,10 @@ import Detalle from "./pages/Detalle.jsx";
 import Ofertas from "./pages/Ofertas.jsx";
 import Manifiesto from "./pages/Manifiesto.jsx";
 import Checkout from "./pages/Checkout.jsx";
+import Flota from "./pages/Flota.jsx";
+import Nosotros from "./pages/Nosotros.jsx";
+import Blog from "./pages/Blog.jsx";
+import Contacto from "./pages/Contacto.jsx";
 
 export default function App() {
   return (
@@ -21,6 +25,10 @@ export default function App() {
         <Route path="manifiesto" element={<Manifiesto />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="detalle/:id" element={<Detalle />} />
+        <Route path="flota" element={<Flota />} />
+        <Route path="nosotros" element={<Nosotros />} />
+        <Route path="blog" element={<Blog />} />
+        <Route path="contacto" element={<Contacto />} />
         <Route path="*" element={<h1>404 · Página no encontrada</h1>} />
       </Route>
     </Routes>
