@@ -1,0 +1,82 @@
+name: CI y despliegue a GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Revisar el código con ESLint
+        run: npm run lint
+
+      - name: Pruebas unitarias y de componentes con cobertura
+        run: npm run test:coverage
+
+      - name: Instalar navegador para Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Pruebas de aceptación
+        run: npm run test:e2e
+
+      # La evidencia se sube aunque las pruebas fallen, para poder revisarla
+      - name: Guardar informe de cobertura
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Guardar informe de Playwright
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Compilar para producción
+        run: npm run build
+
+      - name: Preparar artefacto de Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  desplegar:
+    if: github.ref == 'refs/heads/main'
+    needs: verificar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
