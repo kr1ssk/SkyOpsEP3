@@ -12,6 +12,9 @@ import Flota from "./pages/Flota.jsx";
 import Nosotros from "./pages/Nosotros.jsx";
 import Blog from "./pages/Blog.jsx";
 import Contacto from "./pages/Contacto.jsx";
+import Login from "./pages/Login.jsx";
+import Registro from "./pages/Registro.jsx";
+import Perfil from "./pages/Perfil.jsx";
 
 export default function App() {
   return (
@@ -29,6 +32,9 @@ export default function App() {
         <Route path="nosotros" element={<Nosotros />} />
         <Route path="blog" element={<Blog />} />
         <Route path="contacto" element={<Contacto />} />
+        <Route path="login" element={<Login />} />
+        <Route path="registro" element={<Registro />} />
+        <Route path="perfil" element={<Perfil />} />
         <Route path="*" element={<h1>404 · Página no encontrada</h1>} />
       </Route>
     </Routes>
