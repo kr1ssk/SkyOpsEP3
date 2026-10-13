@@ -45,7 +45,7 @@ export default function TarjetaProducto({ producto, onAgregar }) {
         <div className="mt-auto d-flex gap-2 flex-wrap">
           <Button
             as={Link}
-            to={`/catalogo/${producto.id}`}
+            to={`/detalle/${producto.id}`}
             variant="outline-primary"
           >
             Ver detalle
