@@ -21,6 +21,10 @@ import Productos from "./pages/admin/Productos.jsx";
 import StockCritico from "./pages/admin/StockCritico.jsx";
 import Ordenes from "./pages/admin/Ordenes.jsx";
 import Resultado from "./pages/Resultado.jsx";
+import CategoriasAdmin from "./pages/admin/Categorias.jsx";
+import Usuarios from "./pages/admin/Usuarios.jsx";
+import Reportes from "./pages/admin/Reportes.jsx";
+import DetalleBlog from "./pages/DetalleBlog.jsx";
 
 export default function App() {
   return (
@@ -37,6 +41,7 @@ export default function App() {
         <Route path="flota" element={<Flota />} />
         <Route path="nosotros" element={<Nosotros />} />
         <Route path="blog" element={<Blog />} />
+        <Route path="blog/:id" element={<DetalleBlog />} />
         <Route path="contacto" element={<Contacto />} />
         <Route path="login" element={<Login />} />
         <Route path="registro" element={<Registro />} />
@@ -48,6 +53,9 @@ export default function App() {
           <Route path="productos" element={<Productos />} />
           <Route path="stock" element={<StockCritico />} />
           <Route path="ordenes" element={<Ordenes />} />
+          <Route path="categorias" element={<CategoriasAdmin />} />
+          <Route path="usuarios" element={<Usuarios />} />
+          <Route path="reportes" element={<Reportes />} />
         </Route>
         <Route path="resultado/:id" element={<Resultado />} />
         <Route path="*" element={<h1>404 · Página no encontrada</h1>} />
