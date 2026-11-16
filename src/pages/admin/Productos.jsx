@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Alert, Button, Form, Modal, Table } from "react-bootstrap";
+import { Link } from "react-router-dom";
 
 import { useSkyOps } from "../../context/SkyOpsContext.jsx";
 import { formatoPrecio } from "../../utils/negocio.js";
@@ -18,7 +19,8 @@ const VACIO = {
 };
 
 export default function Productos() {
-  const { datos, guardarProducto, borrarProducto } = useSkyOps();
+  const { datos, usuario, guardarProducto, borrarProducto } = useSkyOps();
+  const admin = usuario?.rol === "admin"; // el vendedor solo consulta
 
   const [formulario, setFormulario] = useState(VACIO);
   const [abierto, setAbierto] = useState(false);
@@ -45,20 +47,20 @@ export default function Productos() {
     });
   }
 
-  function enviar(evento) {
+  async function enviar(evento) {
     evento.preventDefault();
 
     try {
-      guardarProducto(formulario);
+      await guardarProducto(formulario);
       setAbierto(false);
     } catch (problema) {
       setError(problema.message);
     }
   }
 
-  function eliminar(id) {
+  async function eliminar(id) {
     try {
-      borrarProducto(id);
+      await borrarProducto(id);
       setError("");
     } catch (problema) {
       setError(problema.message);
@@ -69,7 +71,7 @@ export default function Productos() {
     <section>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1 className="mb-0">Productos</h1>
-        <Button onClick={abrirNuevo}>Nuevo producto</Button>
+        {admin && <Button onClick={abrirNuevo}>Nuevo producto</Button>}
       </div>
 
       {error && (
@@ -98,12 +100,19 @@ export default function Productos() {
               <td>{producto.stock}</td>
               <td>{formatoPrecio(producto.precio)}</td>
               <td className="d-flex gap-2">
-                <Button size="sm" variant="outline-primary" onClick={() => abrirEdicion(producto)}>
-                  Editar
+                <Button as={Link} size="sm" variant="outline-secondary" to={`/detalle/${producto.id}`}>
+                  Ver detalle
                 </Button>
-                <Button size="sm" variant="outline-danger" onClick={() => eliminar(producto.id)}>
-                  Eliminar
-                </Button>
+                {admin && (
+                  <>
+                    <Button size="sm" variant="outline-primary" onClick={() => abrirEdicion(producto)}>
+                      Editar
+                    </Button>
+                    <Button size="sm" variant="outline-danger" onClick={() => eliminar(producto.id)}>
+                      Eliminar
+                    </Button>
+                  </>
+                )}
               </td>
             </tr>
           ))}

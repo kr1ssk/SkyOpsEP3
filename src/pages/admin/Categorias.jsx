@@ -10,11 +10,11 @@ export default function Categorias() {
   const [editando, setEditando] = useState(null); // null = creando
   const [error, setError] = useState("");
 
-  function enviar(evento) {
+  async function enviar(evento) {
     evento.preventDefault();
 
     try {
-      guardarCategoria({ id: editando, nombre });
+      await guardarCategoria({ id: editando, nombre });
       setNombre("");
       setEditando(null);
       setError("");
@@ -29,9 +29,9 @@ export default function Categorias() {
     setError("");
   }
 
-  function eliminar(id) {
+  async function eliminar(id) {
     try {
-      borrarCategoria(id);
+      await borrarCategoria(id);
       setError("");
     } catch (problema) {
       setError(problema.message);

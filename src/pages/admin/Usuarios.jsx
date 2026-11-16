@@ -30,20 +30,20 @@ export default function Usuarios() {
     setFormulario({ ...formulario, [name]: value });
   }
 
-  function enviar(evento) {
+  async function enviar(evento) {
     evento.preventDefault();
 
     try {
-      guardarUsuario(formulario);
+      await guardarUsuario(formulario);
       setAbierto(false);
     } catch (problema) {
       setError(problema.message);
     }
   }
 
-  function eliminar(id) {
+  async function eliminar(id) {
     try {
-      borrarUsuario(id);
+      await borrarUsuario(id);
       setError("");
     } catch (problema) {
       setError(problema.message);
@@ -138,6 +138,7 @@ export default function Usuarios() {
               <Form.Label>Rol</Form.Label>
               <Form.Select name="rol" value={formulario.rol} onChange={cambiar}>
                 <option value="cliente">Cliente</option>
+                <option value="vendedor">Vendedor</option>
                 <option value="admin">Administrador</option>
               </Form.Select>
             </Form.Group>
