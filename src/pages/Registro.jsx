@@ -18,11 +18,11 @@ export default function Registro() {
     setFormulario({ ...formulario, [name]: value });
   }
 
-  function enviar(evento) {
+  async function enviar(evento) {
     evento.preventDefault();
 
     try {
-      registrarUsuario(formulario);
+      await registrarUsuario(formulario);
       navegar("/login");
     } catch (problema) {
       setError(problema.message);

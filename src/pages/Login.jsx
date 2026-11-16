@@ -12,11 +12,11 @@ export default function Login() {
   const [clave, setClave] = useState("");
   const [error, setError] = useState("");
 
-  function enviar(evento) {
+  async function enviar(evento) {
     evento.preventDefault();
 
     try {
-      iniciarSesion(correo, clave);
+      await iniciarSesion(correo, clave);
       navegar("/perfil"); // navegación por código tras un evento
     } catch (problema) {
       // El contexto lanza el error; aquí se muestra al usuario

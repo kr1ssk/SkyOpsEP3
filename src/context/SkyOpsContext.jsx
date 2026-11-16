@@ -1,194 +1,327 @@
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
+  useMemo,
   useState,
 } from "react";
 
-import { crearDatosIniciales } from "../data/semilla.js";
+import { api, SESION_VENCIDA } from "../services/api.js";
+import { aPedido, aUsuario, deUsuario } from "../services/adaptadores.js";
+import { guardarSesion, leerSesion, limpiarSesion } from "../services/sesion.js";
 import {
   agregarAlCarrito,
   cambiarCantidad,
   quitarDelCarrito,
-  procesarCompra,
 } from "../utils/negocio.js";
-import { guardarProducto as guardarProductoEnDatos, borrarProducto as borrarProductoEnDatos } from "../data/repositorio.js";
-import * as repositorio from "../data/repositorio.js";
 import { validarCheckout } from "../utils/validaciones.js";
 
 export const SkyOpsContext = createContext(null);
-const CLAVE = "skyops_v3";
+const CLAVE_CARRITO = "skyops_carrito";
 
-function leerDatos() {
+// El manifiesto (carrito) vive en el navegador; todo lo demás viene del backend
+function leerCarrito() {
   try {
-    const guardados = localStorage.getItem(CLAVE);
-
-    if (!guardados) {
-      return crearDatosIniciales();
-    }
-
-    const datos = JSON.parse(guardados);
-
-    const listas = [
-      "productos",
-      "flota",
-      "carrito",
-      "pedidos",
-      "contactos",
-    ];
-
-    if (!listas.every((lista) => Array.isArray(datos[lista]))) {
-      return crearDatosIniciales();
-    }
-
-    const iniciales = crearDatosIniciales();
-    return { ...datos, usuarios: Array.isArray(datos.usuarios) ? datos.usuarios : iniciales.usuarios,
-      categorias: Array.isArray(datos.categorias) ? datos.categorias : [...new Set(datos.productos.map(p => p.categoria))].map(nombre => ({ id: nombre, nombre })),
-      sesionId: datos.sesionId || null };
+    const guardado = JSON.parse(localStorage.getItem(CLAVE_CARRITO));
+    return Array.isArray(guardado) ? guardado : [];
   } catch {
-    return crearDatosIniciales();
+    return [];
   }
 }
 
+// Datos públicos del catálogo
+async function pedirPublico() {
+  const [productos, categorias, flota] = await Promise.all([
+    api.get("/productos"),
+    api.get("/categorias"),
+    api.get("/flota"),
+  ]);
+  return { productos, categorias, flota };
+}
+
+// Datos que dependen del rol: el backend entrega todas las boletas al admin y al vendedor,
+// y solo las propias al cliente. Los usuarios solo los ve el admin.
+async function pedirPrivado(rol) {
+  const [boletas, usuarios] = await Promise.all([
+    api.get("/boletas"),
+    rol === "admin" ? api.get("/usuarios") : [],
+  ]);
+  return { pedidos: boletas.map(aPedido), usuarios: usuarios.map(aUsuario) };
+}
+
 export function SkyOpsProvider({ children }) {
-  const [datos, setDatos] = useState(leerDatos);
+  const [productos, setProductos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [flota, setFlota] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
+  const [carrito, setCarrito] = useState(leerCarrito);
+  // La sesión guardada se usa de inmediato para no perderla al recargar;
+  // más abajo se valida contra el backend
+  const [usuario, setUsuario] = useState(() => leerSesion()?.usuario ?? null);
+  const [cargando, setCargando] = useState(true);
+  const [errorServidor, setErrorServidor] = useState("");
   const [errorAlmacenamiento, setErrorAlmacenamiento] = useState("");
 
-  function actualizarDatos(nuevosDatos) {
+  const obtenerPedido = useCallback(async (id) => aPedido(await api.get(`/boletas/${id}`)), []);
+
+  async function recargarProductos() {
+    setProductos(await api.get("/productos"));
+  }
+
+  async function recargarCategorias() {
+    setCategorias(await api.get("/categorias"));
+  }
+
+  async function recargarPrivado(rol) {
     try {
-      localStorage.setItem(CLAVE, JSON.stringify(nuevosDatos));
+      const privados = await pedirPrivado(rol);
+      setPedidos(privados.pedidos);
+      setUsuarios(privados.usuarios);
+    } catch {
+      // Si la sesión venció, api.js la cierra y avisa con el evento SESION_VENCIDA
+    }
+  }
+
+  const idUsuario = usuario?.id ?? null;
+  const rolUsuario = usuario?.rol ?? null;
+
+  // Al abrir la app se cargan los datos públicos: los puede ver cualquiera, con o sin sesión
+  useEffect(() => {
+    pedirPublico()
+      .then((publicos) => {
+        setProductos(publicos.productos);
+        setCategorias(publicos.categorias);
+        setFlota(publicos.flota);
+        setErrorServidor("");
+      })
+      .catch((error) => setErrorServidor(error.message))
+      .finally(() => setCargando(false));
+  }, []);
+
+  // Con sesión se cargan además los datos del rol
+  useEffect(() => {
+    if (!idUsuario) return;
+
+    pedirPrivado(rolUsuario)
+      .then((privados) => {
+        setPedidos(privados.pedidos);
+        setUsuarios(privados.usuarios);
+      })
+      .catch(() => {
+        // Si la sesión venció, api.js la cierra y avisa con el evento SESION_VENCIDA
+      });
+  }, [idUsuario, rolUsuario]);
+
+  // Al abrir o recargar la app se confirma con el backend que la sesión guardada sigue siendo válida
+  useEffect(() => {
+    if (!leerSesion()) return;
+
+    api
+      .get("/usuarios/me")
+      .then((datos) => {
+        const actual = leerSesion();
+        if (!actual) return;
+        const verificado = aUsuario(datos);
+        guardarSesion({ ...actual, usuario: verificado });
+        setUsuario(verificado);
+      })
+      .catch(() => {
+        // 401: api.js ya cerró la sesión. Sin conexión: se mantiene la sesión guardada.
+      });
+  }, []);
+
+  // Cuando no se pudo renovar el token, la sesión se cierra en toda la app
+  useEffect(() => {
+    const cerrar = () => setUsuario(null);
+    window.addEventListener(SESION_VENCIDA, cerrar);
+    return () => window.removeEventListener(SESION_VENCIDA, cerrar);
+  }, []);
+
+  // Se descartan del manifiesto los productos que ya no existen en el catálogo
+  const carritoValido = useMemo(
+    () =>
+      cargando
+        ? []
+        : carrito.filter((item) => productos.some((p) => p.id === item.productoId)),
+    [cargando, carrito, productos]
+  );
+
+  const datos = useMemo(
+    () => ({
+      productos,
+      categorias,
+      flota,
+      carrito: carritoValido,
+      pedidos: usuario ? pedidos : [],
+      usuarios: usuario ? usuarios : [],
+    }),
+    [productos, categorias, flota, carritoValido, pedidos, usuarios, usuario]
+  );
+
+  function actualizarCarrito(nuevoCarrito) {
+    try {
+      localStorage.setItem(CLAVE_CARRITO, JSON.stringify(nuevoCarrito));
       setErrorAlmacenamiento("");
     } catch {
-      setErrorAlmacenamiento(
-        "No se pudieron guardar los cambios en el navegador."
-      );
+      setErrorAlmacenamiento("No se pudo guardar el manifiesto en el navegador.");
     }
 
-    setDatos(nuevosDatos);
+    setCarrito(nuevoCarrito);
   }
 
-  const usuario = datos.usuarios.find(u => u.id === datos.sesionId) || null;
+  // ---------- Sesión ----------
 
-  function exigirAdmin() {
-    if (usuario?.rol !== "admin") throw new Error("Se requiere una cuenta administradora.");
+  async function iniciarSesion(correo, clave) {
+    const respuesta = await api.post("/auth/login", { correo, clave });
+    const sesion = aUsuario(respuesta.usuario);
+
+    guardarSesion({
+      accessToken: respuesta.accessToken,
+      refreshToken: respuesta.refreshToken,
+      usuario: sesion,
+    });
+    setUsuario(sesion);
   }
 
-  function registrarUsuario(formulario) {
-    actualizarDatos(repositorio.guardarUsuario(datos, { ...formulario, id: null, rol: "cliente" }));
+  function cerrarSesion() {
+    limpiarSesion();
+    setUsuario(null);
+    setPedidos([]);
+    setUsuarios([]);
   }
 
-  function iniciarSesion(correo, clave) { actualizarDatos(repositorio.iniciarSesion(datos, correo, clave)); }
-  function cerrarSesion() { actualizarDatos({ ...datos, sesionId: null }); }
-  function guardarUsuario(formulario) { exigirAdmin(); actualizarDatos(repositorio.guardarUsuario(datos, formulario)); }
-  function borrarUsuario(id) { exigirAdmin(); actualizarDatos(repositorio.borrarUsuario(datos, id)); }
-  function guardarCategoria(formulario) { exigirAdmin(); actualizarDatos(repositorio.guardarCategoria(datos, formulario)); }
-  function borrarCategoria(id) { exigirAdmin(); actualizarDatos(repositorio.borrarCategoria(datos, id)); }
-  function actualizarPerfil(formulario) {
-    if (!usuario) throw new Error("Inicia sesión.");
-    actualizarDatos(repositorio.guardarUsuario(datos, { ...usuario, ...formulario, id: usuario.id, rol: usuario.rol }));
+  async function registrarUsuario(formulario) {
+    await api.post("/auth/registro", formulario);
   }
+
+  // ---------- Manifiesto (carrito en el navegador) ----------
 
   function agregarProducto(productoId) {
-    const carrito = agregarAlCarrito(
-      datos.productos,
-      datos.carrito,
-      productoId
-    );
-
-    actualizarDatos({ ...datos, carrito });
+    actualizarCarrito(agregarAlCarrito(productos, carritoValido, productoId));
   }
 
   function actualizarCantidad(productoId, cantidad) {
-    const carrito = cambiarCantidad(
-      datos.productos,
-      datos.carrito,
-      productoId,
-      cantidad
-    );
-
-    actualizarDatos({ ...datos, carrito });
+    actualizarCarrito(cambiarCantidad(productos, carritoValido, productoId, cantidad));
   }
 
   function eliminarDelCarrito(productoId) {
-    const carrito = quitarDelCarrito(datos.carrito, productoId);
-
-    actualizarDatos({ ...datos, carrito });
+    actualizarCarrito(quitarDelCarrito(carritoValido, productoId));
   }
 
-  function confirmarCompra(entrega, aprobada) {
-    const errores = validarCheckout(entrega);
+  // ---------- Compra y boletas ----------
 
-    if (Object.keys(errores).length > 0) {
+  async function confirmarCompra(entrega, aprobada) {
+    if (Object.keys(validarCheckout(entrega)).length > 0) {
       throw new Error("Revisa los datos de entrega.");
     }
 
-    const entregaNormalizada = {
-      ...entrega,
-      matricula: entrega.matricula.trim().toUpperCase(),
-      licencia: entrega.licencia.trim().toUpperCase(),
-      ingeniero: entrega.ingeniero.trim(),
-      correo: entrega.correo.trim(),
-      direccion: entrega.direccion.trim(),
-    };
-
-    const resultado = procesarCompra(
-      datos,
-      { ...entregaNormalizada, usuarioId: usuario?.id || null },
-      aprobada
-    );
-
-    actualizarDatos(resultado.datos);
-
-    return resultado.pedido;
-  }
-
-  function guardarProducto(producto) {
-    exigirAdmin();
-    actualizarDatos(guardarProductoEnDatos(datos, producto));
-  }
-
-  function borrarProducto(productoId) {
-    exigirAdmin();
-    actualizarDatos(borrarProductoEnDatos(datos, productoId));
-  }
-
-  function resolverPedido(pedidoId) {
-    exigirAdmin();
-    const pedidos = datos.pedidos.map((pedido) =>
-      pedido.id === pedidoId && pedido.estado === "Pendiente"
-        ? { ...pedido, estado: "Resuelto" }
-        : pedido
-    );
-
-    actualizarDatos({ ...datos, pedidos });
-  }
-
-  function guardarContacto(contacto) {
-    const nuevo = {
-      ...contacto,
-      id: crypto.randomUUID(),
-      fecha: new Date().toISOString(),
-    };
-
-    actualizarDatos({
-      ...datos,
-      contactos: [nuevo, ...datos.contactos],
+    // El backend recalcula precios y total: solo se envían ids y cantidades
+    const boleta = await api.post("/boletas", {
+      entrega: {
+        ...entrega,
+        matricula: entrega.matricula.trim().toUpperCase(),
+        licencia: entrega.licencia.trim().toUpperCase(),
+        ingeniero: entrega.ingeniero.trim(),
+        correo: entrega.correo.trim(),
+        direccion: entrega.direccion.trim(),
+      },
+      detalles: carritoValido.map(({ productoId, cantidad }) => ({ productoId, cantidad })),
+      aprobada,
     });
+
+    if (aprobada) actualizarCarrito([]);
+    await Promise.all([recargarProductos(), recargarPrivado(rolUsuario)]);
+
+    return aPedido(boleta);
+  }
+
+
+  async function resolverPedido(pedidoId) {
+    await api.put(`/boletas/${pedidoId}/resolver`);
+    await recargarPrivado(rolUsuario);
+  }
+
+  // ---------- Administración ----------
+
+  async function guardarProducto(producto) {
+    if (producto.id === null) {
+      await api.post("/productos", producto);
+    } else {
+      await api.put(`/productos/${producto.id}`, producto);
+    }
+
+    await recargarProductos();
+  }
+
+  async function borrarProducto(productoId) {
+    await api.delete(`/productos/${productoId}`);
+    await recargarProductos();
+  }
+
+  async function guardarCategoria(categoria) {
+    const cuerpo = { nombre: categoria.nombre };
+
+    if (categoria.id === null) {
+      await api.post("/categorias", cuerpo);
+    } else {
+      await api.put(`/categorias/${categoria.id}`, cuerpo);
+    }
+
+    // Renombrar una categoría cambia el nombre que muestran los productos
+    await Promise.all([recargarCategorias(), recargarProductos()]);
+  }
+
+  async function borrarCategoria(id) {
+    await api.delete(`/categorias/${id}`);
+    await recargarCategorias();
+  }
+
+  async function guardarUsuario(formulario) {
+    const cuerpo = deUsuario(formulario);
+
+    if (formulario.id === null) {
+      await api.post("/usuarios", cuerpo);
+    } else {
+      await api.put(`/usuarios/${formulario.id}`, cuerpo);
+    }
+
+    await recargarPrivado(rolUsuario);
+  }
+
+  async function borrarUsuario(id) {
+    await api.delete(`/usuarios/${id}`);
+    await recargarPrivado(rolUsuario);
+  }
+
+  async function guardarContacto(contacto) {
+    await api.post("/contactos", contacto);
   }
 
   return (
     <SkyOpsContext.Provider
       value={{
         datos,
-        usuario, registrarUsuario, iniciarSesion, cerrarSesion, actualizarPerfil,
-        guardarUsuario, borrarUsuario, guardarCategoria, borrarCategoria,
+        cargando,
+        errorServidor,
         errorAlmacenamiento,
+        usuario,
+        iniciarSesion,
+        cerrarSesion,
+        registrarUsuario,
         agregarProducto,
         actualizarCantidad,
         eliminarDelCarrito,
         confirmarCompra,
+        obtenerPedido,
+        resolverPedido,
         guardarProducto,
         borrarProducto,
-        resolverPedido,
+        guardarCategoria,
+        borrarCategoria,
+        guardarUsuario,
+        borrarUsuario,
         guardarContacto,
       }}
     >
