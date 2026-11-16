@@ -1,21 +1,39 @@
+import { useEffect, useState } from "react";
 import { Alert, Button, Card, Table } from "react-bootstrap";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import { useSkyOps } from "../context/SkyOpsContext.jsx";
 import { formatoPrecio } from "../utils/negocio.js";
 
 export default function Resultado() {
   const { id } = useParams(); // el folio viene de la URL
-  const { datos } = useSkyOps();
+  const { obtenerPedido } = useSkyOps();
 
-  const pedido = datos.pedidos.find((p) => p.id === id);
+  const [pedido, setPedido] = useState(null);
+  const [error, setError] = useState("");
 
-  // Si el folio no existe, se vuelve al inicio
+  // El comprobante se pide al backend: solo lo puede ver su dueño, el vendedor o el admin
+  useEffect(() => {
+    obtenerPedido(id)
+      .then(setPedido)
+      .catch((problema) => setError(problema.message));
+  }, [id, obtenerPedido]);
+
+  if (error) {
+    return (
+      <>
+        <Alert variant="danger" role="alert">{error}</Alert>
+        <Link to="/">Volver al inicio</Link>
+      </>
+    );
+  }
+
   if (!pedido) {
-    return <Navigate to="/" replace />;
+    return <p>Cargando comprobante…</p>;
   }
 
   const rechazado = pedido.estado === "Rechazado";
+  const folio = String(pedido.id).padStart(8, "0");
 
   return (
     <section>
@@ -25,7 +43,7 @@ export default function Resultado() {
         <Alert variant="danger">
           <h1 className="h4">No se pudo autorizar el despacho</h1>
           <p className="mb-0">
-            Folio {pedido.id.slice(0, 8).toUpperCase()}. El manifiesto
+            Folio {folio}. El manifiesto
             se conserva para que puedas reintentar.
           </p>
         </Alert>
@@ -33,7 +51,7 @@ export default function Resultado() {
         <Alert variant="success">
           <h1 className="h4">Despacho autorizado</h1>
           <p className="mb-0">
-            Folio {pedido.id.slice(0, 8).toUpperCase()}. El equipo de
+            Folio {folio}. El equipo de
             bodega preparará los componentes.
           </p>
         </Alert>

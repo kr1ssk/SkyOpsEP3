@@ -13,14 +13,16 @@ export default function Contacto() {
   const [formulario, setFormulario] = useState(VACIO);
   const [errores, setErrores] = useState({});
   const [enviado, setEnviado] = useState(false);
+  const [error, setError] = useState("");
 
   function cambiar(evento) {
     const { name, value } = evento.target;
     setFormulario({ ...formulario, [name]: value });
   }
 
-  function enviar(evento) {
+  async function enviar(evento) {
     evento.preventDefault(); // evita que el navegador recargue la página
+    setError("");
 
     const encontrados = validarContacto(formulario);
     setErrores(encontrados);
@@ -30,9 +32,14 @@ export default function Contacto() {
       return;
     }
 
-    guardarContacto(formulario);
-    setFormulario(VACIO);
-    setEnviado(true);
+    try {
+      await guardarContacto(formulario);
+      setFormulario(VACIO);
+      setEnviado(true);
+    } catch (problema) {
+      setEnviado(false);
+      setError(problema.message);
+    }
   }
 
   return (
@@ -43,6 +50,12 @@ export default function Contacto() {
       {enviado && (
         <Alert variant="success" role="alert">
           Mensaje enviado. Gracias por contactarte con SkyOps.
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="danger" role="alert">
+          {error}
         </Alert>
       )}
 

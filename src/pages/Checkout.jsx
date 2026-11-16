@@ -39,7 +39,7 @@ export default function Checkout() {
     setEntrega({ ...entrega, [campo]: valor });
   }
 
-  function enviar(event) {
+  async function enviar(event) {
     event.preventDefault();
     setError("");
 
@@ -51,7 +51,7 @@ export default function Checkout() {
     }
 
     try {
-      const pedido = confirmarCompra(
+      const pedido = await confirmarCompra(
         entrega,
         resultadoSimulado === "aprobada"
       );
