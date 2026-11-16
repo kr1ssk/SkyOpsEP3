@@ -51,12 +51,15 @@ export default function TarjetaProducto({ producto, onAgregar }) {
             Ver detalle
           </Button>
 
-          <Button
-            disabled={producto.stock === 0}
-            onClick={() => onAgregar(producto.id)}
-          >
-            Agregar
-          </Button>
+          {/* Sin onAgregar (por ejemplo, el vendedor) la tarjeta es solo de consulta */}
+          {onAgregar && (
+            <Button
+              disabled={producto.stock === 0}
+              onClick={() => onAgregar(producto.id)}
+            >
+              Agregar
+            </Button>
+          )}
         </div>
       </Card.Body>
     </Card>

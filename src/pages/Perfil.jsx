@@ -1,25 +1,19 @@
 import { Badge, Button, Card, Table } from "react-bootstrap";
-import { Navigate, useNavigate } from "react-router-dom";
 
 import { useSkyOps } from "../context/SkyOpsContext.jsx";
 import { formatoPrecio } from "../utils/negocio.js";
 
 export default function Perfil() {
   const { usuario, datos, cerrarSesion } = useSkyOps();
-  const navegar = useNavigate();
-
-  // Ruta protegida: sin sesión se redirige al login
-  if (!usuario) {
-    return <Navigate to="/login" replace />;
-  }
+  // La ruta está protegida por <Acceso> en App.jsx: aquí siempre hay un usuario con sesión
 
   const mios = datos.pedidos.filter(
     (pedido) => pedido.entrega.usuarioId === usuario.id
   );
 
+  // Al cerrar la sesión, <Acceso> redirige solo al login
   function salir() {
     cerrarSesion();
-    navegar("/");
   }
 
   return (

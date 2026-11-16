@@ -10,7 +10,8 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 import { useSkyOps } from "../context/SkyOpsContext.jsx";
 
 export default function Layout() {
-  const { datos, usuario, errorAlmacenamiento } = useSkyOps();
+  const { datos, usuario, errorServidor, errorAlmacenamiento } = useSkyOps();
+  const esVendedor = usuario?.rol === "vendedor";
 
   const cantidad = datos.carrito.reduce(
     (total, item) => total + item.cantidad,
@@ -50,9 +51,12 @@ export default function Layout() {
                 Flota
               </Nav.Link>
 
-              <Nav.Link as={NavLink} to="/manifiesto" eventKey="manifiesto">
-                Manifiesto ({cantidad})
-              </Nav.Link>
+              {/* El vendedor solo consulta productos y órdenes: no tiene manifiesto */}
+              {!esVendedor && (
+                <Nav.Link as={NavLink} to="/manifiesto" eventKey="manifiesto">
+                  Manifiesto ({cantidad})
+                </Nav.Link>
+              )}
 
               <Nav.Link as={NavLink} to="/ofertas" eventKey="ofertas">Ofertas</Nav.Link>
               <NavDropdown title="Información" id="menu-informacion">
@@ -60,6 +64,7 @@ export default function Layout() {
                 <NavDropdown.Item as={Link} to="/blog" eventKey="blog">Blog</NavDropdown.Item>
               </NavDropdown>
               {usuario?.rol === "admin" && <Nav.Link as={NavLink} to="/admin" eventKey="admin">Administración</Nav.Link>}
+              {esVendedor && <Nav.Link as={NavLink} to="/admin/productos" eventKey="admin">Panel de ventas</Nav.Link>}
               <Nav.Link as={NavLink} to={usuario ? "/perfil" : "/login"} eventKey="cuenta">{usuario ? "Mi perfil" : "Iniciar sesión"}</Nav.Link>
               <Nav.Link as={NavLink} to="/contacto" eventKey="contacto">
                 Contacto
@@ -70,6 +75,12 @@ export default function Layout() {
       </Navbar>
 
       <Container as="main" className="py-4 flex-grow-1">
+        {errorServidor && (
+          <Alert variant="danger" role="alert">
+            {errorServidor}
+          </Alert>
+        )}
+
         {errorAlmacenamiento && (
           <Alert variant="danger" role="alert">
             {errorAlmacenamiento}

@@ -1,6 +1,8 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 
+import Acceso from "./components/Acceso.jsx";
 import Layout from "./components/Layout.jsx";
+import { useSkyOps } from "./context/SkyOpsContext.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import Catalogo from "./pages/Catalogo.jsx";
 import Categorias from "./pages/Categorias.jsx";
@@ -26,6 +28,13 @@ import Usuarios from "./pages/admin/Usuarios.jsx";
 import Reportes from "./pages/admin/Reportes.jsx";
 import DetalleBlog from "./pages/DetalleBlog.jsx";
 
+// El panel de administración abre en el Dashboard solo para el administrador;
+// el vendedor entra directo a Productos
+function InicioAdmin() {
+  const { usuario } = useSkyOps();
+  return usuario.rol === "admin" ? <Dashboard /> : <Navigate to="/admin/productos" replace />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -36,7 +45,10 @@ export default function App() {
         <Route path="categorias" element={<Categorias />} />
         <Route path="ofertas" element={<Ofertas />} />
         <Route path="manifiesto" element={<Manifiesto />} />
-        <Route path="checkout" element={<Checkout />} />
+        {/* Comprar exige sesión de cliente o administrador */}
+        <Route element={<Acceso roles={["cliente", "admin"]} />}>
+          <Route path="checkout" element={<Checkout />} />
+        </Route>
         <Route path="detalle/:id" element={<Detalle />} />
         <Route path="flota" element={<Flota />} />
         <Route path="nosotros" element={<Nosotros />} />
@@ -45,19 +57,26 @@ export default function App() {
         <Route path="contacto" element={<Contacto />} />
         <Route path="login" element={<Login />} />
         <Route path="registro" element={<Registro />} />
-        <Route path="perfil" element={<Perfil />} />
-        {/* Rutas anidadas: LayoutAdmin dibuja las pestañas y
-            las hijas se insertan en su propio <Outlet /> */}
-        <Route path="admin" element={<LayoutAdmin />}>
-          <Route index element={<Dashboard />} />
-          <Route path="productos" element={<Productos />} />
-          <Route path="stock" element={<StockCritico />} />
-          <Route path="ordenes" element={<Ordenes />} />
-          <Route path="categorias" element={<CategoriasAdmin />} />
-          <Route path="usuarios" element={<Usuarios />} />
-          <Route path="reportes" element={<Reportes />} />
+        <Route element={<Acceso />}>
+          <Route path="perfil" element={<Perfil />} />
+          <Route path="resultado/:id" element={<Resultado />} />
         </Route>
-        <Route path="resultado/:id" element={<Resultado />} />
+        {/* Rutas anidadas: LayoutAdmin dibuja las pestañas y
+            las hijas se insertan en su propio <Outlet />.
+            Admin y vendedor entran al panel; solo el admin ve el resto de las pestañas. */}
+        <Route element={<Acceso roles={["admin", "vendedor"]} />}>
+          <Route path="admin" element={<LayoutAdmin />}>
+            <Route index element={<InicioAdmin />} />
+            <Route path="productos" element={<Productos />} />
+            <Route path="ordenes" element={<Ordenes />} />
+            <Route element={<Acceso roles={["admin"]} />}>
+              <Route path="stock" element={<StockCritico />} />
+              <Route path="categorias" element={<CategoriasAdmin />} />
+              <Route path="usuarios" element={<Usuarios />} />
+              <Route path="reportes" element={<Reportes />} />
+            </Route>
+          </Route>
+        </Route>
         <Route path="*" element={<h1>404 · Página no encontrada</h1>} />
       </Route>
     </Routes>

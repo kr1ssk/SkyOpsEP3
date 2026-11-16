@@ -7,7 +7,7 @@ import { formatoPrecio, precioFinal } from "../utils/negocio.js";
 
 export default function Detalle() {
   const { id } = useParams();
-  const { datos, agregarProducto } = useSkyOps();
+  const { datos, cargando, usuario, agregarProducto } = useSkyOps();
 
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
@@ -15,6 +15,10 @@ export default function Detalle() {
   const producto = datos.productos.find(
     (p) => String(p.id) === id
   );
+
+  if (cargando) {
+    return <p>Cargando producto…</p>;
+  }
 
   if (!producto) {
     return (
@@ -81,12 +85,15 @@ export default function Detalle() {
           {mensaje && <Alert variant="success">{mensaje}</Alert>}
           {error && <Alert variant="danger" role="alert">{error}</Alert>}
 
-          <Button
-            onClick={agregar}
-            disabled={producto.stock === 0}
-          >
-            Agregar al manifiesto
-          </Button>
+          {/* El vendedor solo consulta el catálogo: no compra */}
+          {usuario?.rol !== "vendedor" && (
+            <Button
+              onClick={agregar}
+              disabled={producto.stock === 0}
+            >
+              Agregar al manifiesto
+            </Button>
+          )}
         </Col>
       </Row>
     </>

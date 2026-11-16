@@ -6,7 +6,7 @@ import TarjetaProducto from "../components/TarjetaProducto.jsx";
 import { useSkyOps } from "../context/SkyOpsContext.jsx";
 
 export default function Catalogo({ ofertas = false }) {
-  const { datos, agregarProducto } = useSkyOps();
+  const { datos, usuario, agregarProducto } = useSkyOps();
   const [params, setParams] = useSearchParams();
 
   const [mensaje, setMensaje] = useState("");
@@ -114,7 +114,7 @@ export default function Catalogo({ ofertas = false }) {
             <Col xs={12} md={6} lg={4} key={producto.id}>
               <TarjetaProducto
                 producto={producto}
-                onAgregar={agregar}
+                onAgregar={usuario?.rol === "vendedor" ? undefined : agregar}
               />
             </Col>
           ))}

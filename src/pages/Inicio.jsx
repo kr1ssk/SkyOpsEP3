@@ -6,12 +6,15 @@ import { useSkyOps } from "../context/SkyOpsContext.jsx";
 export default function Inicio() {
   const { datos, usuario } = useSkyOps();
 
+  // Admin y vendedor ven las órdenes de todos; el cliente solo las suyas
+  const esPersonal = usuario?.rol === "admin" || usuario?.rol === "vendedor";
+
   const ofertas = datos.productos.filter(
     (producto) => producto.descuento > 0
   ).length;
 
   const pendientes = datos.pedidos.filter(
-    (pedido) => pedido.estado === "Pendiente" && (usuario?.rol === "admin" || pedido.entrega.usuarioId === usuario?.id)
+    (pedido) => pedido.estado === "Pendiente" && (esPersonal || pedido.entrega.usuarioId === usuario?.id)
   ).length;
 
   return (
@@ -52,7 +55,7 @@ export default function Inicio() {
           <Card body className="h-100">
             <h2 className="h5">Pedidos pendientes</h2>
             <p className="numero">{pendientes}</p>
-            <Link to={usuario?.rol === "admin" ? "/admin/ordenes" : usuario ? "/perfil" : "/login"}>{usuario ? "Ver pedidos" : "Iniciar sesión"}</Link>
+            <Link to={esPersonal ? "/admin/ordenes" : usuario ? "/perfil" : "/login"}>{usuario ? "Ver pedidos" : "Iniciar sesión"}</Link>
           </Card>
         </Col>
       </Row>
