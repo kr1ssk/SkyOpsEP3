@@ -60,7 +60,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+      # VITE_API_URL se fija al compilar y queda dentro del bundle.
+      # Vacio  -> rutas relativas (/api/v1): para cuando nginx sirve el frontend y la API
+      #           desde el mismo origen, que es como se despliega en EC2.
+      # Con valor -> apunta a otro backend. Se define en el repositorio en
+      #           Settings > Secrets and variables > Actions > Variables.
+      # OJO: GitHub Pages sirve por https, y una pagina https no puede llamar a una API
+      # http. Por eso el despliegue real de la evaluacion es el de EC2, no este.
       - name: Compilar para producción
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: npm run build
 
       - name: Preparar artefacto de Pages
