@@ -22,6 +22,14 @@ El frontend consume la API REST del backend de SkyOps (Spring Boot + MySQL, repo
 
 ## Puesta en marcha
 
+### Con Docker
+
+Para iniciar frontend, API y MySQL juntos, sigue el apartado **Con Docker Compose** del README del repositorio
+[SkyOps Backend](https://github.com/kr1ssk/SkyOpsEVP3). Ambos repositorios deben estar clonados en carpetas hermanas.
+La interfaz queda en http://localhost:3000 y Swagger en http://localhost:8080/swagger-ui.html.
+
+### Ejecución directa (sin Docker)
+
 Primero hay que iniciar el backend (ver su README): `./mvnw spring-boot:run`, queda en http://localhost:8080.
 
 ```bash
